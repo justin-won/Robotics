@@ -14,7 +14,6 @@
 #include <webots/robot.h>
 #include <webots/distance_sensor.h>
 #include <webots/motor.h>
-#include <webots/gyro.h>
 
 
 /*
@@ -35,9 +34,7 @@
  * The arguments of the main function can be specified by the
  * "controllerArgs" field of the Robot node
  */
- 
- void wb_gyro_enable(WbDeviceTag tag, int sampling_period);
- 
+  
  void go_forward(WbDeviceTag left_motor , WbDeviceTag right_motor){
   
     wb_motor_set_velocity(left_motor, MAX_SPEED);
@@ -71,10 +68,7 @@ void final_state(WbDeviceTag left_motor, WbDeviceTag right_motor, double ps_valu
     }else if(ps_values[5] >= 90){
       final_state_2(left_motor, right_motor, ps_values, ps);
       return;
-    } else {
-      // go forward 
-      go_forward(left_motor, right_motor);
-    }
+    } 
   }
 }
 
