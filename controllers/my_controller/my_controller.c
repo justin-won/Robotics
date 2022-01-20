@@ -37,7 +37,60 @@
  */
  
  void wb_gyro_enable(WbDeviceTag tag, int sampling_period);
+ 
+ void go_forward(WbDeviceTag left_motor , WbDeviceTag right_motor){
+  
+    wb_motor_set_velocity(left_motor, MAX_SPEED);
+    wb_motor_set_velocity(right_motor, MAX_SPEED);
+   
+ }
+ 
+ void turn_around(WbDeviceTag left_motor , WbDeviceTag right_motor, float duration ){
+    // once we are near an object turn in place  
+    float left_speed  = 0.25*MAX_SPEED;
+    float right_speed = -0.25*MAX_SPEED;
+    
+    wb_motor_set_velocity(left_motor, left_speed);
+    wb_motor_set_velocity(right_motor, right_speed);
+    
+    // duration is our best guess for how long it'll turn 180 degrees 
+    float end_time= wb_robot_get_time()+duration;
+    while (wb_robot_step(TIME_STEP) != -1 && wb_robot_get_time() < end_time)
+    continue;
+ }
 
+void final_state(WbDeviceTag left_motor, WbDeviceTag right_motor, double ps_values [], WbDeviceTag ps[]){
+  while (wb_robot_step(TIME_STEP) != -1) {
+    for (int i = 0; i < 8 ; i++)
+       ps_values[i] = wb_distance_sensor_get_value(ps[i]);
+    
+    // if we are in the 5cm, spin
+    if(ps_values[0]>=100 || ps_values[7]>=100){
+      wb_motor_set_velocity(left_motor, 0.25*MAX_SPEED);
+      wb_motor_set_velocity(right_motor, -0.25*MAX_SPEED);
+    }else if(ps_values[5] >= 90){
+      final_state_2(left_motor, right_motor, ps_values, ps);
+      return;
+    } else {
+      // go forward 
+      go_forward(left_motor, right_motor);
+    }
+  }
+}
+
+void final_state_2(WbDeviceTag left_motor, WbDeviceTag right_motor, double ps_values [], WbDeviceTag ps[]){
+   while (wb_robot_step(TIME_STEP) != -1) {
+     for (int i = 0; i < 8 ; i++)
+       ps_values[i] = wb_distance_sensor_get_value(ps[i]);
+       
+     if(ps_values[5] >= 90){
+        go_forward(left_motor, right_motor);
+      } else {
+       return;
+      }
+   
+   }
+}
  
 int main(int argc, char **argv) {
 // initialize the webot api 
@@ -64,68 +117,46 @@ int main(int argc, char **argv) {
   wb_motor_set_velocity(left_motor, MAX_SPEED);
   wb_motor_set_velocity(right_motor, MAX_SPEED);
 
-  /*
-   * You should declare here WbDeviceTag variables for storing
-   * robot devices like this:
-   *  WbDeviceTag my_sensor = wb_robot_get_device("my_sensor");
-   *  WbDeviceTag my_actuator = wb_robot_get_device("my_actuator");
-   */
-
   /* main loop
    * Perform simulation steps of TIME_STEP milliseconds
    * and leave the loop when the simulation is over
    */
+  int collisions = 0;
   while (wb_robot_step(TIME_STEP) != -1) {
-    /*
-     * Read the sensors :
-     * Enter here functions to read sensor data, like:
-     *  double val = wb_distance_sensor_get_value(my_sensor);
-     */
-// read sensor outputs
+
+  // read sensor outputs
    double ps_values[8];
    for (i = 0; i < 8 ; i++)
      ps_values[i] = wb_distance_sensor_get_value(ps[i]);
      
+   /* 
+      States 1 and 2
+      our best guess for within 0.05 m of that objects 
+      0 and 7 are the front sensors 
+      as we get closer the values increase 
+   */ 
+   if ((ps_values[0]>=100 || ps_values[7]>=100) && collisions < 1){
+        
+     // once we are near an object turn in place  
+     turn_around(left_motor, right_motor, 2.825);
      
-     if (ps_values[0]>=100 || ps_values[7]>=100){
-       float left_speed  = 0.25*MAX_SPEED;
-       float right_speed = -0.25*MAX_SPEED;
-
-        wb_motor_set_velocity(left_motor, left_speed);
-        wb_motor_set_velocity(right_motor, right_speed);
-        /*
-        vector<vector<vector<string>>> some_vector
-        double gyrovalues[] = wb_gyro_get_values();
-        zG=gyr
-        */
-        //printf(wb_gyro_get_values());
-        
-        
-       float duration=2.825;
-        float end_time= wb_robot_get_time()+duration;
-        while (wb_robot_step(TIME_STEP) != -1 && wb_robot_get_time() < end_time)
-          continue;
-        wb_motor_set_velocity(left_motor, 4*left_speed);
-        wb_motor_set_velocity(right_motor, -4*right_speed);
-        
-        // if(ps_values[3]==ps_values[4]){
-        // wb_motor_set_velocity(left_motor,0);
-        // wb_motor_set_velocity(right_motor,0);
-        // }
-       if (ps_values[0]>=100 || ps_values[7]>=100){
-          wb_motor_set_velocity(left_motor, left_speed);
-          wb_motor_set_velocity(right_motor, right_speed);
-          
-       }
-       
-     }
-  
-    /* Process sensor data here */
-
-    /*
-     * Enter here functions to send actuator commands, like:
-     * wb_motor_set_position(my_actuator, 10.0);
-     */
+     go_forward(left_motor, right_motor);
+     
+     collisions = collisions + 1;
+   }
+   
+   // State 3
+   if(collisions == 1){
+      // final_state(left_motor, right_motor, ps_values[5]);          
+      final_state(left_motor, right_motor, ps_values, ps);
+      collisions = collisions + 1;
+    }
+    
+    // Final State 4
+    if(collisions > 1){
+      wb_motor_set_velocity(left_motor, 0);
+      wb_motor_set_velocity(right_motor, 0);
+    }
   };
 
   /* Enter your cleanup code here */

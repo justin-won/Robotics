@@ -14,12 +14,12 @@ RectangleArena {
 }
 WoodenBox {
   translation 0.2 0 0
-  size 0.1 0.1 0.1
+  size 0.1 0.5 0.1
 }
 WoodenBox {
   translation -0.3 0 0
   name "wooden box(1)"
-  size 0.1 0.1 0.1
+  size 0.1 0.5 0.1
 }
 E-puck {
   controller "my_controller"
